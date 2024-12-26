@@ -1,7 +1,8 @@
 import pathlib
 import random
 from dataclasses import asdict, dataclass
-from typing import Optional, Tuple
+from functools import partial
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -16,6 +17,9 @@ from tqdm.auto import tqdm
 from ncsn.pipeline_ncsn import NCSNPipeline
 from ncsn.scheduling_ncsn import AnnealedLangevinDynamicScheduler
 from ncsn.unet_2d_ncsn import UNet2DModelForNCSN
+
+# Set the dynamic_ncols=True for tqdm
+tqdm = partial(tqdm, dynamic_ncols=True)
 
 
 @dataclass
@@ -34,6 +38,7 @@ class TrainConfig(CommonConfig):
 
     num_annealed_steps: int = 100
     sampling_eps: float = 1e-5
+
     num_workers: int = 4
     shuffle: bool = True
     lr: float = 1e-4
@@ -95,6 +100,7 @@ def train_iteration(
             bsz = x.shape[0]
             x = x.to(device)
 
+            # Sample a random timestep
             t = torch.randint(
                 0,
                 train_config.num_train_timesteps,
@@ -102,21 +108,27 @@ def train_iteration(
                 device=device,
             )
 
+            # Sample a random noise
             z = torch.randn_like(x)
+            # Add noise to the input
             x_noisy = noise_scheduler.add_noise(x, z, t)
 
+            # Calculate the score using the model
             scores = unet(x_noisy, t).sample  # type: ignore
+            # Calculate the target score
             used_sigmas = unet.sigmas[t]  # type: ignore
             used_sigmas = rearrange(used_sigmas, "b -> b 1 1 1")
             target = -1 / used_sigmas * z
-
+            # Rearrange the tensors
             target = rearrange(target, "b c h w -> b (c h w)")
             scores = rearrange(scores, "b c h w -> b (c h w)")
 
+            # Calculate the loss
             loss = F.mse_loss(scores, target, reduction="none")
             loss = loss.mean(dim=-1) * used_sigmas.squeeze() ** 2
             loss = loss.mean(dim=0)
 
+            # Perform the optimization step
             optim.zero_grad()
             loss.backward()
             optim.step()
@@ -149,7 +161,7 @@ def train(
         )
 
         # Perform validation and save the model
-        if epoch + 1 % train_config.display_epoch == 0 and save_dir is not None:
+        if epoch % train_config.display_epoch == 0 and save_dir is not None:
             # Load the model as a image generation pipeline
             pipe = NCSNPipeline(unet=unet, scheduler=noise_scheduler)
             pipe.set_progress_bar_config(desc="Generating...", leave=False)
@@ -166,9 +178,13 @@ def train(
                 cols=train_config.num_grid_cols,
             )
 
+            # Prepare the directory to save the images
+            save_valid_dir = save_dir / "validation"
+            save_valid_dir.mkdir(parents=True, exist_ok=True)
+
             # Save the images
-            image.save(save_dir / f"epoch={epoch:03d}.png")
-            image.save(save_dir / "training.png")
+            image.save(save_valid_dir / f"epoch={epoch:03d}.png")
+            image.save(save_valid_dir / "validation.png")
 
 
 def main():
@@ -229,12 +245,46 @@ def main():
         save_dir=save_dir,
     )
 
-    # Generate the final image
+    # Define the pipeline
     pipe = NCSNPipeline(unet=unet, scheduler=noise_scheduler)
+
+    # Define a callback to decode the samples to grid image
+    def decode_samples(
+        pipe: NCSNPipeline,
+        step_index: int,
+        timestep: torch.Tensor,
+        callback_kwargs: Dict,
+    ) -> Dict:
+        # Decode the samples to images
+        samples = callback_kwargs["samples"]
+        samples = pipe.decode_samples(samples)
+        images = pipe.numpy_to_pil(samples.cpu().numpy())
+
+        # Create the grid image
+        image = make_image_grid(
+            images,
+            rows=train_config.num_grid_rows,
+            cols=train_config.num_grid_cols,
+        )
+
+        # Prepare the directory to save the images
+        save_steps_dir = save_dir / "timesteps"
+        save_steps_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save the images
+        image.save(
+            save_steps_dir / f"timestep={timestep:03d}_annealing={step_index:03d}.png"
+        )
+
+        return callback_kwargs
+
+    # Generate images with the pipeline; use `decode_samples` as a callback
     output = pipe(
         num_inference_steps=train_config.num_train_timesteps,
-        batch_size=train_config.batch_size,
+        batch_size=train_config.num_generate_images,
         generator=torch.manual_seed(train_config.seed),
+        callback_on_step_end=decode_samples,  # type: ignore
+        callback_on_step_end_tensor_inputs=("samples",),
     )
 
     # Save the final image
@@ -244,6 +294,9 @@ def main():
         cols=train_config.num_grid_cols,
     )
     image.save(save_dir / "final.png")
+
+    # Save the trained model as a pipeline
+    pipe.save_pretrained(save_dir / "ncsn-pipeline")
 
 
 if __name__ == "__main__":
