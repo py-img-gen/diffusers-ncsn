@@ -105,8 +105,8 @@ def train_iteration(
             z = torch.randn_like(x)
             x_noisy = noise_scheduler.add_noise(x, z, t)
 
-            scores = unet(x_noisy, t).sample
-            used_sigmas = unet.sigmas[t]
+            scores = unet(x_noisy, t).sample  # type: ignore
+            used_sigmas = unet.sigmas[t]  # type: ignore
             used_sigmas = rearrange(used_sigmas, "b -> b 1 1 1")
             target = -1 / used_sigmas * z
 
@@ -135,7 +135,7 @@ def train(
     save_dir: Optional[pathlib.Path] = None,
 ) -> None:
     # Set unet denoiser model to train mode
-    unet.train()
+    unet.train()  # type: ignore
 
     for epoch in tqdm(range(train_config.num_epochs), desc="Epoch"):
         # Run the training iteration
