@@ -1,6 +1,7 @@
-from typing import Optional, Tuple, Union
+from typing import Callable, Dict, Optional, Self, Sequence, Tuple, Union
 
 import torch
+from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline, ImagePipelineOutput
 from einops import rearrange
 
@@ -47,12 +48,20 @@ class NCSNPipeline(DiffusionPipeline):
 
     unet: UNet2DModelForNCSN
     scheduler: AnnealedLangevinDynamicScheduler
+    _callback_tensor_inputs = ["sample"]
 
     def __init__(
         self, unet: UNet2DModelForNCSN, scheduler: AnnealedLangevinDynamicScheduler
     ) -> None:
         super().__init__()
         self.register_modules(unet=unet, scheduler=scheduler)
+
+    def decode_samples(self, samples: torch.Tensor) -> torch.Tensor:
+        # Normalize the generated image
+        samples = normalize_images(samples)
+        # Rearrange the generated image to the correct format
+        samples = rearrange(samples, "b c w h -> b w h c")
+        return samples
 
     @torch.no_grad()
     def __call__(
@@ -62,6 +71,14 @@ class NCSNPipeline(DiffusionPipeline):
         generator: Optional[torch.Generator] = None,
         output_type: str = "pil",
         return_dict: bool = True,
+        callback_on_step_end: Optional[
+            Union[
+                Callable[[Self, int, int, Dict], Dict],
+                PipelineCallback,
+                MultiPipelineCallbacks,
+            ]
+        ] = None,
+        callback_on_step_end_tensor_inputs: Sequence[str] = ("sample",),
         **kwargs,
     ) -> Union[ImagePipelineOutput, Tuple]:
         r"""
@@ -79,55 +96,71 @@ class NCSNPipeline(DiffusionPipeline):
                 The output format of the generated image. Choose between `PIL.Image` or `np.array`.
             return_dict (`bool`, *optional*, defaults to `True`):
                 Whether or not to return a [`ImagePipelineOutput`] instead of a plain tuple.
+            callback_on_step_end (`Callable`, `PipelineCallback`, `MultiPipelineCallbacks`, *optional*):
+                A function or a subclass of `PipelineCallback` or `MultiPipelineCallbacks` that is called at the end of
+                each denoising step during the inference. with the following arguments: `callback_on_step_end(self:
+                DiffusionPipeline, step: int, timestep: int, callback_kwargs: Dict)`. `callback_kwargs` will include a
+                list of all tensors as specified by `callback_on_step_end_tensor_inputs`.
+            callback_on_step_end_tensor_inputs (`List`, *optional*):
+                The list of tensor inputs for the `callback_on_step_end` function. The tensors specified in the list
+                will be passed as `callback_kwargs` argument. You will only be able to include variables listed in the
+                `._callback_tensor_inputs` attribute of your pipeline class.
 
         Returns:
             [`~pipelines.ImagePipelineOutput`] or `tuple`:
                 If `return_dict` is `True`, [`~pipelines.ImagePipelineOutput`] is returned, otherwise a `tuple` is
                 returned where the first element is a list with the generated images.
         """
-        sample_shape = (
+        if isinstance(callback_on_step_end, (PipelineCallback, MultiPipelineCallbacks)):
+            callback_on_step_end_tensor_inputs = callback_on_step_end.tensor_inputs
+
+        samples_shape = (
             batch_size,
             self.unet.config.in_channels,  # type: ignore
             self.unet.config.sample_size,  # type: ignore
             self.unet.config.sample_size,  # type: ignore
         )
         # Generate a random sample
-        sample = torch.rand(sample_shape, generator=generator)
-        sample = sample.to(self.device)
+        samples = torch.rand(samples_shape, generator=generator)
+        samples = samples.to(self.device)
 
         # Set the number of inference steps for the scheduler
         self.scheduler.set_timesteps(num_inference_steps)
 
         # Perform the reverse diffusion process
         for t in self.progress_bar(self.scheduler.timesteps):
-            # Predict the score using the model
-            model_output = self.unet(sample, t).sample  # type: ignore
+            # Perform `num_annnealed_steps` annealing steps
+            for i in range(self.scheduler.num_annealed_steps):
+                # Predict the score using the model
+                model_output = self.unet(samples, t).sample  # type: ignore
 
-            # Perform the annealed langevin dynamics
-            output = self.scheduler.step(
-                model_output=model_output,
-                model=self.unet,
-                timestep=t,
-                sample=sample,
-                generator=generator,
-                return_dict=return_dict,
-            )
-            sample = (
-                output.prev_sample
-                if isinstance(output, AnnealedLangevinDynamicOutput)
-                else output[0]
-            )
+                # Perform the annealed langevin dynamics
+                output = self.scheduler.step(
+                    model_output=model_output,
+                    timestep=t,
+                    samples=samples,
+                    generator=generator,
+                    return_dict=return_dict,
+                )
+                samples = (
+                    output.prev_sample
+                    if isinstance(output, AnnealedLangevinDynamicOutput)
+                    else output[0]
+                )
 
-        # Normalize the generated image
-        sample = normalize_images(sample)
+                if callback_on_step_end is not None:
+                    callback_kwargs = {}
+                    for k in callback_on_step_end_tensor_inputs:
+                        callback_kwargs[k] = locals()[k]
+                    callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
+                    samples = callback_outputs.pop("sample", samples)
 
-        # Rearrange the generated image to the correct format
-        sample = rearrange(sample, "b c w h -> b w h c")
+        samples = self.decode_samples(samples)
 
         if output_type == "pil":
-            sample = self.numpy_to_pil(sample.cpu().numpy())
+            samples = self.numpy_to_pil(samples.cpu().numpy())
 
         if return_dict:
-            return ImagePipelineOutput(images=sample)  # type: ignore
+            return ImagePipelineOutput(images=samples)  # type: ignore
         else:
-            return (sample,)
+            return (samples,)
