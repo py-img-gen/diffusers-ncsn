@@ -5,11 +5,16 @@ description = "Diffusers implementation of Noise Conditional Score Networks (NCS
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "diffusers[torch]>=0.31.0",
+    "diffusers[torch]>=0.31.0,!=0.32.1",
     "einops>=0.7.0",
     "torch>=1.0.0",
     "torchvision>=0.2.1",
     "transformers>=4.30.0",
+]
+
+[project.optional-dependencies]
+training = [
+    "matplotlib>=3.10.0",
 ]
 
 [dependency-groups]
