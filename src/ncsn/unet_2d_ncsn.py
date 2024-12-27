@@ -3,10 +3,11 @@ from typing import Optional, Tuple, Union
 
 import torch
 from diffusers import UNet2DModel
-from diffusers.configuration_utils import register_to_config
+from diffusers.configuration_utils import ConfigMixin, register_to_config
+from diffusers.models.modeling_utils import ModelMixin
 
 
-class UNet2DModelForNCSN(UNet2DModel):
+class UNet2DModelForNCSN(UNet2DModel, ModelMixin, ConfigMixin):  # type: ignore[misc]
     @register_to_config
     def __init__(
         self,
