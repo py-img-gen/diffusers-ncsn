@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Optional, Self, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Self, Tuple, Union
 
 import torch
 from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
@@ -48,7 +48,8 @@ class NCSNPipeline(DiffusionPipeline):
 
     unet: UNet2DModelForNCSN
     scheduler: AnnealedLangevinDynamicScheduler
-    _callback_tensor_inputs = ["sample"]
+
+    _callback_tensor_inputs: List[str] = ["samples"]
 
     def __init__(
         self, unet: UNet2DModelForNCSN, scheduler: AnnealedLangevinDynamicScheduler
@@ -78,7 +79,7 @@ class NCSNPipeline(DiffusionPipeline):
                 MultiPipelineCallbacks,
             ]
         ] = None,
-        callback_on_step_end_tensor_inputs: Sequence[str] = ("sample",),
+        callback_on_step_end_tensor_inputs: Optional[List[str]] = None,
         **kwargs,
     ) -> Union[ImagePipelineOutput, Tuple]:
         r"""
@@ -111,6 +112,9 @@ class NCSNPipeline(DiffusionPipeline):
                 If `return_dict` is `True`, [`~pipelines.ImagePipelineOutput`] is returned, otherwise a `tuple` is
                 returned where the first element is a list with the generated images.
         """
+        callback_on_step_end_tensor_inputs = (
+            callback_on_step_end_tensor_inputs or self._callback_tensor_inputs
+        )
         if isinstance(callback_on_step_end, (PipelineCallback, MultiPipelineCallbacks)):
             callback_on_step_end_tensor_inputs = callback_on_step_end.tensor_inputs
 
@@ -120,7 +124,10 @@ class NCSNPipeline(DiffusionPipeline):
             self.unet.config.sample_size,  # type: ignore
             self.unet.config.sample_size,  # type: ignore
         )
+
         # Generate a random sample
+        # NOTE: The behavior of random number generation is different between CPU and GPU,
+        # so first generate random numbers on CPU and then move them to GPU (if available).
         samples = torch.rand(samples_shape, generator=generator)
         samples = samples.to(self.device)
 
@@ -148,12 +155,14 @@ class NCSNPipeline(DiffusionPipeline):
                     else output[0]
                 )
 
+                # Perform the callback on step end if provided
                 if callback_on_step_end is not None:
                     callback_kwargs = {}
                     for k in callback_on_step_end_tensor_inputs:
                         callback_kwargs[k] = locals()[k]
+
                     callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
-                    samples = callback_outputs.pop("sample", samples)
+                    samples = callback_outputs.pop("samples", samples)
 
         samples = self.decode_samples(samples)
 
