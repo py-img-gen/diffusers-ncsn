@@ -10,7 +10,9 @@
 
 Example of generating MNIST character images using the model trained with [`train_mnist.py`](https://github.com/py-img-gen/diffusers-ncsn/blob/main/train_mnist.py).
 
-![mnist](https://github.com/user-attachments/assets/483b6637-2684-4844-8aa1-12b866d46226)
+<div align="center">
+    <img alt="mnist" src="https://github.com/user-attachments/assets/483b6637-2684-4844-8aa1-12b866d46226" width="50%" />
+</div>
 
 ## Acknowledgements
 
