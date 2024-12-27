@@ -1,9 +1,8 @@
 import pathlib
-import random
-from dataclasses import asdict, dataclass
-from typing import Optional, Tuple
+from dataclasses import asdict, dataclass, field
+from functools import partial
+from typing import Dict, Tuple
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 import torchvision
@@ -12,66 +11,140 @@ from einops import rearrange
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm.auto import tqdm
+from transformers import HfArgumentParser, TrainingArguments, set_seed
 
 from ncsn.pipeline_ncsn import NCSNPipeline
 from ncsn.scheduling_ncsn import AnnealedLangevinDynamicScheduler
 from ncsn.unet_2d_ncsn import UNet2DModelForNCSN
 
-
-@dataclass
-class CommonConfig(object):
-    sigma_min: float = 0.005
-    sigma_max: float = 10
-    num_train_timesteps: int = 10
+# Set the dynamic_ncols=True for tqdm
+tqdm = partial(tqdm, dynamic_ncols=True)
 
 
 @dataclass
-class TrainConfig(CommonConfig):
-    seed: int = 19950815
-    batch_size: int = 256
-    num_epochs: int = 200
-    display_epoch: int = 10
+class TrainArgs(TrainingArguments):
+    """Arguments for training the model"""
 
-    num_annealed_steps: int = 100
-    sampling_eps: float = 1e-5
-    num_workers: int = 4
-    shuffle: bool = True
-    lr: float = 1e-4
-
-    num_generate_images: int = 16
-    num_grid_rows: int = 4
-    num_grid_cols: int = 4
-
-
-@dataclass
-class ModelConfig(CommonConfig):
-    sample_size: int = 32
-    in_channels: int = 1
-    out_channels: int = 1
-    block_out_channels: Tuple[int, ...] = (64, 128, 256, 512)
-    layers_per_block: int = 3
-    down_block_types: Tuple[str, ...] = (
-        "DownBlock2D",
-        "DownBlock2D",
-        "DownBlock2D",
-        "DownBlock2D",
+    output_dir: pathlib.Path = field(
+        default=pathlib.Path(__file__).parent / "outputs",
+        metadata={"help": "The output directory"},
     )
-    up_block_types: Tuple[str, ...] = (
-        "UpBlock2D",
-        "UpBlock2D",
-        "UpBlock2D",
-        "UpBlock2D",
+    per_device_train_batch_size: int = field(
+        default=256,
+        metadata={"help": "Batch size"},
+    )
+    eval_epoch: int = field(
+        default=10,
+        metadata={"help": "Epoch to evaluate"},
+    )
+    num_train_timesteps: int = field(
+        default=10,
+        metadata={"help": "Number of timesteps"},
+    )
+    num_annealed_steps: int = field(
+        default=100,
+        metadata={"help": "Number of annealed steps"},
+    )
+    sampling_eps: float = field(
+        default=1e-5,
+        metadata={"help": "Sampling epsilon"},
+    )
+    learning_rate: float = field(
+        default=1e-4,
+        metadata={"help": "Learning rate"},
+    )
+    shuffle: bool = field(
+        default=True,
+        metadata={"help": "Shuffle the dataset"},
     )
 
+    def __post_init__(self) -> None:
+        self.output_dir = pathlib.Path(self.output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
-def set_seed(seed: int) -> None:
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
+        self.validation_dir.mkdir(parents=True, exist_ok=True)
+        self.animation_dir.mkdir(parents=True, exist_ok=True)
 
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    @property
+    def batch_size(self) -> int:
+        return self.per_device_train_batch_size
+
+    @property
+    def validation_dir(self) -> pathlib.Path:
+        return self.output_dir / "validation"
+
+    @property
+    def animation_dir(self) -> pathlib.Path:
+        return self.output_dir / "timesteps"
+
+
+@dataclass
+class ValidArgs(object):
+    """Arguments for validation"""
+
+    num_grid_rows: int = field(
+        default=4,
+        metadata={"help": "Number of grid rows"},
+    )
+    num_grid_cols: int = field(
+        default=4,
+        metadata={"help": "Number of grid columns"},
+    )
+    num_generate_images: int = field(
+        default=16,
+        metadata={"help": "Number of images to generate"},
+    )
+
+
+@dataclass
+class ModelArgs:
+    """Arguments for the model"""
+
+    sigma_min: float = field(
+        default=0.005,
+        metadata={"help": "Minimum value of sigma"},
+    )
+    sigma_max: float = field(
+        default=10,
+        metadata={"help": "Maximum value of sigma"},
+    )
+    sample_size: int = field(
+        default=32,
+        metadata={"help": "Size of the input image"},
+    )
+    in_channels: int = field(
+        default=1,
+        metadata={"help": "Number of input channels"},
+    )
+    out_channels: int = field(
+        default=1,
+        metadata={"help": "Number of output channels"},
+    )
+    block_out_channels: Tuple[int, ...] = field(
+        default=(64, 128, 256, 512),
+        metadata={"help": "Number of output channels for each block"},
+    )
+    layers_per_block: int = field(
+        default=3, metadata={"help": "Number of layers per block"}
+    )
+    down_block_types: Tuple[str, ...] = field(
+        default=(
+            "DownBlock2D",
+            "DownBlock2D",
+            "DownBlock2D",
+            "DownBlock2D",
+        ),
+        metadata={"help": "Types of down blocks"},
+    )
+    up_block_types: Tuple[str, ...] = field(
+        default=(
+            "UpBlock2D",
+            "UpBlock2D",
+            "UpBlock2D",
+            "UpBlock2D",
+        ),
+        metadata={"help": "Types of up blocks"},
+    )
 
 
 def get_transforms(sample_size: int) -> transforms.Compose:
@@ -83,7 +156,7 @@ def get_transforms(sample_size: int) -> transforms.Compose:
 
 
 def train_iteration(
-    train_config: TrainConfig,
+    train_args: TrainArgs,
     unet: UNet2DModelForNCSN,
     noise_scheduler: AnnealedLangevinDynamicScheduler,
     optim: torch.optim.Optimizer,
@@ -95,28 +168,35 @@ def train_iteration(
             bsz = x.shape[0]
             x = x.to(device)
 
+            # Sample a random timestep
             t = torch.randint(
                 0,
-                train_config.num_train_timesteps,
+                train_args.num_train_timesteps,
                 size=(bsz,),
                 device=device,
             )
 
+            # Sample a random noise
             z = torch.randn_like(x)
+            # Add noise to the input
             x_noisy = noise_scheduler.add_noise(x, z, t)
 
+            # Calculate the score using the model
             scores = unet(x_noisy, t).sample  # type: ignore
+            # Calculate the target score
             used_sigmas = unet.sigmas[t]  # type: ignore
             used_sigmas = rearrange(used_sigmas, "b -> b 1 1 1")
             target = -1 / used_sigmas * z
-
+            # Rearrange the tensors
             target = rearrange(target, "b c h w -> b (c h w)")
             scores = rearrange(scores, "b c h w -> b (c h w)")
 
+            # Calculate the loss
             loss = F.mse_loss(scores, target, reduction="none")
             loss = loss.mean(dim=-1) * used_sigmas.squeeze() ** 2
             loss = loss.mean(dim=0)
 
+            # Perform the optimization step
             optim.zero_grad()
             loss.backward()
             optim.step()
@@ -126,21 +206,21 @@ def train_iteration(
 
 
 def train(
-    train_config: TrainConfig,
+    train_args: TrainArgs,
+    valid_args: ValidArgs,
     unet: UNet2DModelForNCSN,
     noise_scheduler: AnnealedLangevinDynamicScheduler,
     optim: torch.optim.Optimizer,
     data_loader: DataLoader,
     device: torch.device,
-    save_dir: Optional[pathlib.Path] = None,
 ) -> None:
     # Set unet denoiser model to train mode
     unet.train()  # type: ignore
 
-    for epoch in tqdm(range(train_config.num_epochs), desc="Epoch"):
+    for epoch in tqdm(range(train_args.num_train_epochs), desc="Epoch"):
         # Run the training iteration
         train_iteration(
-            train_config=train_config,
+            train_args=train_args,
             unet=unet,
             noise_scheduler=noise_scheduler,
             optim=optim,
@@ -149,102 +229,137 @@ def train(
         )
 
         # Perform validation and save the model
-        if epoch + 1 % train_config.display_epoch == 0 and save_dir is not None:
+        if epoch % train_args.eval_epoch == 0 and train_args.output_dir is not None:
             # Load the model as a image generation pipeline
             pipe = NCSNPipeline(unet=unet, scheduler=noise_scheduler)
             pipe.set_progress_bar_config(desc="Generating...", leave=False)
 
             # Generate the images
             output = pipe(
-                batch_size=train_config.num_generate_images,
-                num_inference_steps=train_config.num_train_timesteps,
-                generator=torch.manual_seed(train_config.seed),
+                batch_size=valid_args.num_generate_images,
+                num_inference_steps=train_args.num_train_timesteps,
+                generator=torch.manual_seed(train_args.seed),
             )
             image = make_image_grid(
                 images=output.images,  # type: ignore
-                rows=train_config.num_grid_rows,
-                cols=train_config.num_grid_cols,
+                rows=valid_args.num_grid_rows,
+                cols=valid_args.num_grid_cols,
             )
 
             # Save the images
-            image.save(save_dir / f"epoch={epoch:03d}.png")
-            image.save(save_dir / "training.png")
+            image.save(train_args.validation_dir / f"epoch={epoch:03d}.png")
+            image.save(train_args.validation_dir / "validation.png")
 
 
-def main():
-    # Create a directory to save the output
-    save_dir = pathlib.Path.cwd() / "output"
-    save_dir.mkdir(parents=True, exist_ok=True)
-
-    # Define the configuration
-    train_config = TrainConfig()
-    model_config = ModelConfig()
-
+def main(model_args: ModelArgs, train_args: TrainArgs, valid_args: ValidArgs):
     # Set the seed for reproducibility
-    set_seed(seed=train_config.seed)
+    set_seed(seed=train_args.seed, deterministic=True)
 
     # Get the appropriate device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create the model
-    unet = UNet2DModelForNCSN(**asdict(model_config))
+    unet = UNet2DModelForNCSN(**asdict(model_args))
     unet = unet.to(device)
 
     # Create the noise scheduler
     noise_scheduler = AnnealedLangevinDynamicScheduler(
-        num_train_timesteps=train_config.num_train_timesteps,
-        num_annealed_steps=train_config.num_annealed_steps,
-        sigma_min=train_config.sigma_min,
-        sigma_max=train_config.sigma_max,
-        sampling_eps=train_config.sampling_eps,
+        num_train_timesteps=train_args.num_train_timesteps,
+        num_annealed_steps=train_args.num_annealed_steps,
+        sigma_min=model_args.sigma_min,
+        sigma_max=model_args.sigma_max,
+        sampling_eps=train_args.sampling_eps,
     )
 
     # Create the optimizer
-    optim = torch.optim.Adam(unet.parameters(), lr=train_config.lr)
+    optim = torch.optim.Adam(unet.parameters(), lr=train_args.learning_rate)
 
     # Load the MNIST dataset
     dataset = torchvision.datasets.MNIST(
         root="~/.cache",
         train=True,
         download=True,
-        transform=get_transforms(sample_size=model_config.sample_size),
+        transform=get_transforms(sample_size=model_args.sample_size),
     )
     # Create the data loader
     data_loader = DataLoader(
         dataset=dataset,
-        batch_size=train_config.batch_size,
-        shuffle=train_config.shuffle,
-        drop_last=True,
-        num_workers=train_config.num_workers,
+        batch_size=train_args.batch_size,
+        shuffle=train_args.shuffle,
+        drop_last=train_args.dataloader_drop_last,
+        num_workers=train_args.dataloader_num_workers,
     )
 
     # Train the model!
     train(
-        train_config=train_config,
+        train_args=train_args,
+        valid_args=valid_args,
         unet=unet,
         noise_scheduler=noise_scheduler,
         optim=optim,
         data_loader=data_loader,
         device=device,
-        save_dir=save_dir,
     )
 
-    # Generate the final image
+    # Define the pipeline
     pipe = NCSNPipeline(unet=unet, scheduler=noise_scheduler)
+
+    # Define a callback to decode the samples to grid image
+    def decode_samples(
+        pipe: NCSNPipeline,
+        step_index: int,
+        timestep: torch.Tensor,
+        callback_kwargs: Dict,
+    ) -> Dict:
+        # Get the samples from the callback kwargs
+        # NOTE: The samples are cloned to avoid modifying the original
+        samples = callback_kwargs["samples"]
+        samples = samples.detach().clone()
+
+        # Decode the samples to images
+        samples = pipe.decode_samples(samples)
+        images = pipe.numpy_to_pil(samples.cpu().numpy())
+
+        # Create the grid image
+        image = make_image_grid(
+            images,
+            rows=valid_args.num_grid_rows,
+            cols=valid_args.num_grid_cols,
+        )
+
+        # Save the images
+        image.save(
+            train_args.animation_dir
+            / f"timestep={timestep:03d}_annealing={step_index:03d}.png"
+        )
+
+        return callback_kwargs
+
+    # Generate images with the pipeline; use `decode_samples` as a callback
     output = pipe(
-        num_inference_steps=train_config.num_train_timesteps,
-        batch_size=train_config.batch_size,
-        generator=torch.manual_seed(train_config.seed),
+        num_inference_steps=train_args.num_train_timesteps,
+        batch_size=valid_args.num_generate_images,
+        generator=torch.manual_seed(train_args.seed),
+        callback_on_step_end=decode_samples,  # type: ignore
+        callback_on_step_end_tensor_inputs=["samples"],
     )
 
     # Save the final image
     image = make_image_grid(
         images=output.images,  # type: ignore
-        rows=train_config.num_grid_rows,
-        cols=train_config.num_grid_cols,
+        rows=valid_args.num_grid_rows,
+        cols=valid_args.num_grid_cols,
     )
-    image.save(save_dir / "final.png")
+    image.save(train_args.output_dir / "final.png")
+
+    # Save the trained model as a pipeline
+    pipe.save_pretrained(train_args.output_dir / "ncsn-pipeline")
+
+    # Push the pipeline to the hub (optional)
+    # pipe.push_to_hub("py-img-gen/ncsn-mnist", private=True)
 
 
 if __name__ == "__main__":
-    main()
+    parser = HfArgumentParser(dataclass_types=(ModelArgs, TrainArgs, ValidArgs))
+    model_args, train_args, valid_args = parser.parse_args_into_dataclasses()
+    main(model_args=model_args, train_args=train_args, valid_args=valid_args)

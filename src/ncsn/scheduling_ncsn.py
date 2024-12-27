@@ -31,8 +31,8 @@ class AnnealedLangevinDynamicScheduler(SchedulerMixin, ConfigMixin):  # type: ig
         sigma_max: float,
         sampling_eps: float,
     ) -> None:
-        self._num_train_timesteps = num_train_timesteps
-        self._num_annealed_steps = num_annealed_steps
+        self.num_train_timesteps = num_train_timesteps
+        self.num_annealed_steps = num_annealed_steps
 
         self._sigma_min = sigma_min
         self._sigma_max = sigma_max
@@ -99,38 +99,22 @@ class AnnealedLangevinDynamicScheduler(SchedulerMixin, ConfigMixin):  # type: ig
         sampling_eps = sampling_eps or self._sampling_eps
         self._step_size = sampling_eps * (self.sigmas / self.sigmas[-1]) ** 2
 
-    def _step_annealing(
-        self,
-        model_output: torch.Tensor,
-        timestep: int,
-        sample: torch.Tensor,
-    ) -> torch.Tensor:
-        z = torch.randn_like(sample)
-        step_size = self.step_size[timestep]
-        sample = sample + 0.5 * step_size * model_output + torch.sqrt(step_size) * z
-        return sample
-
     def step(
         self,
         model_output: torch.Tensor,
-        model,
         timestep: int,
-        sample: torch.Tensor,
+        samples: torch.Tensor,
         return_dict: bool = True,
         **kwargs,
     ) -> Union[AnnealedLangevinDynamicOutput, Tuple]:
-        for _ in range(self._num_annealed_steps):
-            sample = self._step_annealing(
-                model_output=model_output,
-                timestep=timestep,
-                sample=sample,
-            )
-            model_output = model(sample, timestep).sample
+        z = torch.randn_like(samples)
+        step_size = self.step_size[timestep]
+        samples = samples + 0.5 * step_size * model_output + torch.sqrt(step_size) * z
 
         if return_dict:
-            return AnnealedLangevinDynamicOutput(prev_sample=sample)
+            return AnnealedLangevinDynamicOutput(prev_sample=samples)
         else:
-            return (sample,)
+            return (samples,)
 
     def add_noise(
         self,
