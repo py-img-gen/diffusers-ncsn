@@ -13,6 +13,7 @@ from einops import rearrange
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm.auto import tqdm
+from transformers import set_seed
 
 from ncsn.pipeline_ncsn import NCSNPipeline
 from ncsn.scheduling_ncsn import AnnealedLangevinDynamicScheduler
@@ -67,16 +68,6 @@ class ModelConfig(CommonConfig):
         "UpBlock2D",
         "UpBlock2D",
     )
-
-
-def set_seed(seed: int) -> None:
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
 
 
 def get_transforms(sample_size: int) -> transforms.Compose:
@@ -189,7 +180,7 @@ def train(
 
 def main():
     # Create a directory to save the output
-    save_dir = pathlib.Path.cwd() / "output"
+    save_dir = pathlib.Path.cwd() / "outputs"
     save_dir.mkdir(parents=True, exist_ok=True)
 
     # Define the configuration
@@ -197,7 +188,7 @@ def main():
     model_config = ModelConfig()
 
     # Set the seed for reproducibility
-    set_seed(seed=train_config.seed)
+    set_seed(seed=train_config.seed, deterministic=True)
 
     # Get the appropriate device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -255,8 +246,12 @@ def main():
         timestep: torch.Tensor,
         callback_kwargs: Dict,
     ) -> Dict:
-        # Decode the samples to images
+        # Get the samples from the callback kwargs
+        # NOTE: The samples are cloned to avoid modifying the original
         samples = callback_kwargs["samples"]
+        samples = samples.detach().clone()
+
+        # Decode the samples to images
         samples = pipe.decode_samples(samples)
         images = pipe.numpy_to_pil(samples.cpu().numpy())
 
@@ -284,7 +279,7 @@ def main():
         batch_size=train_config.num_generate_images,
         generator=torch.manual_seed(train_config.seed),
         callback_on_step_end=decode_samples,  # type: ignore
-        callback_on_step_end_tensor_inputs=("samples",),
+        callback_on_step_end_tensor_inputs=["samples"],
     )
 
     # Save the final image
