@@ -15,11 +15,13 @@ from einops import rearrange
 
 
 @dataclass
-class AnnealedLangevinDynamicOutput(SchedulerOutput):
-    """Annealed Langevin Dynamic output class."""
+class AnnealedLangevinDynamicsOutput(SchedulerOutput):
+    """Annealed Langevin Dynamics output class."""
 
 
-class AnnealedLangevinDynamicScheduler(SchedulerMixin, ConfigMixin):  # type: ignore
+class AnnealedLangevinDynamicsScheduler(SchedulerMixin, ConfigMixin):  # type: ignore
+    """Annealed Langevin Dynamics scheduler for Noise Conditional Score Network (NCSN)."""
+
     order = 1
 
     @register_to_config
@@ -106,13 +108,13 @@ class AnnealedLangevinDynamicScheduler(SchedulerMixin, ConfigMixin):  # type: ig
         samples: torch.Tensor,
         return_dict: bool = True,
         **kwargs,
-    ) -> Union[AnnealedLangevinDynamicOutput, Tuple]:
+    ) -> Union[AnnealedLangevinDynamicsOutput, Tuple]:
         z = torch.randn_like(samples)
         step_size = self.step_size[timestep]
         samples = samples + 0.5 * step_size * model_output + torch.sqrt(step_size) * z
 
         if return_dict:
-            return AnnealedLangevinDynamicOutput(prev_sample=samples)
+            return AnnealedLangevinDynamicsOutput(prev_sample=samples)
         else:
             return (samples,)
 
