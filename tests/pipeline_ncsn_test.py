@@ -163,7 +163,7 @@ def test_push_to_hub(
 
     api.upload_file(
         path_or_fileobj=pipeline_script_path,
-        path_in_repo="pipeline.py",
+        path_in_repo=pipeline_script_path.name,
         repo_id=hf_repo_id,
         repo_type=repo_type,
     )

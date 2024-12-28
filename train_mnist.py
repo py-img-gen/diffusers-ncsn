@@ -14,8 +14,8 @@ from tqdm.auto import tqdm
 from transformers import HfArgumentParser, TrainingArguments, set_seed
 
 from ncsn.pipeline_ncsn import NCSNPipeline
-from ncsn.scheduling_ncsn import AnnealedLangevinDynamicScheduler
-from ncsn.unet_2d_ncsn import UNet2DModelForNCSN
+from ncsn.scheduler import AnnealedLangevinDynamicsScheduler
+from ncsn.unet import UNet2DModelForNCSN
 
 # Set the dynamic_ncols=True for tqdm
 tqdm = partial(tqdm, dynamic_ncols=True)
@@ -32,6 +32,10 @@ class TrainArgs(TrainingArguments):
     per_device_train_batch_size: int = field(
         default=256,
         metadata={"help": "Batch size"},
+    )
+    num_train_epochs: int = field(
+        default=150,
+        metadata={"help": "Number of epochs"},
     )
     eval_epoch: int = field(
         default=10,
@@ -158,7 +162,7 @@ def get_transforms(sample_size: int) -> transforms.Compose:
 def train_iteration(
     train_args: TrainArgs,
     unet: UNet2DModelForNCSN,
-    noise_scheduler: AnnealedLangevinDynamicScheduler,
+    noise_scheduler: AnnealedLangevinDynamicsScheduler,
     optim: torch.optim.Optimizer,
     data_loader: DataLoader,
     device: torch.device,
@@ -209,7 +213,7 @@ def train(
     train_args: TrainArgs,
     valid_args: ValidArgs,
     unet: UNet2DModelForNCSN,
-    noise_scheduler: AnnealedLangevinDynamicScheduler,
+    noise_scheduler: AnnealedLangevinDynamicsScheduler,
     optim: torch.optim.Optimizer,
     data_loader: DataLoader,
     device: torch.device,
@@ -263,7 +267,7 @@ def main(model_args: ModelArgs, train_args: TrainArgs, valid_args: ValidArgs):
     unet = unet.to(device)
 
     # Create the noise scheduler
-    noise_scheduler = AnnealedLangevinDynamicScheduler(
+    noise_scheduler = AnnealedLangevinDynamicsScheduler(
         num_train_timesteps=train_args.num_train_timesteps,
         num_annealed_steps=train_args.num_annealed_steps,
         sigma_min=model_args.sigma_min,
@@ -356,7 +360,7 @@ def main(model_args: ModelArgs, train_args: TrainArgs, valid_args: ValidArgs):
     pipe.save_pretrained(train_args.output_dir / "ncsn-pipeline")
 
     # Push the pipeline to the hub (optional)
-    # pipe.push_to_hub("py-img-gen/ncsn-mnist", private=True)
+    pipe.push_to_hub("py-img-gen/ncsn-mnist", private=True)
 
 
 if __name__ == "__main__":
