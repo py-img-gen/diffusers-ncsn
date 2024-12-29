@@ -1,4 +1,3 @@
-import os
 import pathlib
 from typing import Dict
 
@@ -144,12 +143,12 @@ def pipeline_script_path(lib_dir: pathlib.Path) -> pathlib.Path:
 
 @pytest.fixture
 def scheduler_script_path(lib_dir: pathlib.Path) -> pathlib.Path:
-    return lib_dir / "scheduling_ncsn.py"
+    return lib_dir / "scheduler" / "scheduling_ncsn.py"
 
 
 @pytest.fixture
 def unet_2d_script_path(lib_dir: pathlib.Path) -> pathlib.Path:
-    return lib_dir / "unet_2d_ncsn.py"
+    return lib_dir / "unet" / "unet_2d_ncsn.py"
 
 
 def test_push_to_hub(
@@ -179,3 +178,48 @@ def test_push_to_hub(
         repo_id=hf_repo_id,
         repo_type=repo_type,
     )
+
+
+def test_pipeline_hf_hub():
+    import torch
+    from diffusers import DiffusionPipeline
+    from diffusers.utils import make_image_grid
+
+    # Specify the device to use
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Load the pipeline from the Hugging Face Hub
+    pipe = DiffusionPipeline.from_pretrained(
+        "py-img-gen/ncsn-mnist", trust_remote_code=True
+    )
+    pipe = pipe.to(device)
+
+    # Generate samples; here, we specify the seed and generate 16 images
+    output = pipe(
+        batch_size=16,
+        generator=torch.manual_seed(42),
+    )
+
+    # Create a grid image from the generated samples
+    image = make_image_grid(images=output.images, rows=4, cols=4)
+    image.save("output.png")
+
+
+def test_pipeline_ncsn():
+    import torch
+
+    from ncsn.pipeline_ncsn import NCSNPipeline
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    pipe = NCSNPipeline.from_pretrained("py-img-gen/ncsn-mnist", trust_remote_code=True)
+    pipe = pipe.to(device)
+
+    # Generate samples; here, we specify the seed and generate 16 images
+    output = pipe(
+        batch_size=16,
+        generator=torch.manual_seed(42),
+    )
+
+    # Create a grid image from the generated samples
+    image = make_image_grid(images=output.images, rows=4, cols=4)
+    image.save("output.png")

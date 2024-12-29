@@ -362,7 +362,7 @@ def main(model_args: ModelArgs, train_args: TrainArgs, valid_args: ValidArgs):
     pipe.save_pretrained(train_args.output_dir / "ncsn-pipeline")
 
     # Push the pipeline to the hub (optional)
-    pipe.push_to_hub("py-img-gen/ncsn-mnist", private=True)
+    # pipe.push_to_hub("py-img-gen/ncsn-mnist", private=True)
 
 
 if __name__ == "__main__":
