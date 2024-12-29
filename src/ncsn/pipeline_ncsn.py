@@ -1,9 +1,10 @@
-from typing import Callable, Dict, List, Optional, Self, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import torch
 from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline, ImagePipelineOutput
 from einops import rearrange
+from typing_extensions import Self
 
 from .scheduler.scheduling_ncsn import (
     AnnealedLangevinDynamicsOutput,
