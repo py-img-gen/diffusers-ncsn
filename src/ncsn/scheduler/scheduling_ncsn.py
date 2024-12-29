@@ -105,18 +105,18 @@ class AnnealedLangevinDynamicsScheduler(SchedulerMixin, ConfigMixin):  # type: i
         self,
         model_output: torch.Tensor,
         timestep: int,
-        samples: torch.Tensor,
+        sample: torch.Tensor,
         return_dict: bool = True,
         **kwargs,
     ) -> Union[AnnealedLangevinDynamicsOutput, Tuple]:
-        z = torch.randn_like(samples)
+        z = torch.randn_like(sample)
         step_size = self.step_size[timestep]
-        samples = samples + 0.5 * step_size * model_output + torch.sqrt(step_size) * z
+        sample = sample + 0.5 * step_size * model_output + torch.sqrt(step_size) * z
 
         if return_dict:
-            return AnnealedLangevinDynamicsOutput(prev_sample=samples)
+            return AnnealedLangevinDynamicsOutput(prev_sample=sample)
         else:
-            return (samples,)
+            return (sample,)
 
     def add_noise(
         self,

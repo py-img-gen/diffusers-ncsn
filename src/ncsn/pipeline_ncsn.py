@@ -128,8 +128,8 @@ class NCSNPipeline(DiffusionPipeline):
         # Generate a random sample
         # NOTE: The behavior of random number generation is different between CPU and GPU,
         # so first generate random numbers on CPU and then move them to GPU (if available).
-        samples = torch.rand(samples_shape, generator=generator)
-        samples = samples.to(self.device)
+        sample = torch.rand(samples_shape, generator=generator)
+        sample = sample.to(self.device)
 
         # Set the number of inference steps for the scheduler
         self.scheduler.set_timesteps(num_inference_steps)
@@ -139,17 +139,17 @@ class NCSNPipeline(DiffusionPipeline):
             # Perform `num_annnealed_steps` annealing steps
             for i in range(self.scheduler.num_annealed_steps):
                 # Predict the score using the model
-                model_output = self.unet(samples, t).sample  # type: ignore
+                model_output = self.unet(sample, t).sample  # type: ignore
 
                 # Perform the annealed langevin dynamics
                 output = self.scheduler.step(
                     model_output=model_output,
                     timestep=t,
-                    samples=samples,
+                    sample=sample,
                     generator=generator,
                     return_dict=return_dict,
                 )
-                samples = (
+                sample = (
                     output.prev_sample
                     if isinstance(output, AnnealedLangevinDynamicsOutput)
                     else output[0]
@@ -162,14 +162,14 @@ class NCSNPipeline(DiffusionPipeline):
                         callback_kwargs[k] = locals()[k]
 
                     callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
-                    samples = callback_outputs.pop("samples", samples)
+                    sample = callback_outputs.pop("samples", sample)
 
-        samples = self.decode_samples(samples)
+        sample = self.decode_samples(sample)
 
         if output_type == "pil":
-            samples = self.numpy_to_pil(samples.cpu().numpy())
+            sample = self.numpy_to_pil(sample.cpu().numpy())
 
         if return_dict:
-            return ImagePipelineOutput(images=samples)  # type: ignore
+            return ImagePipelineOutput(images=sample)  # type: ignore
         else:
-            return (samples,)
+            return (sample,)
