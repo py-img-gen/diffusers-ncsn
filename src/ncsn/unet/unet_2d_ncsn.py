@@ -76,7 +76,8 @@ class UNet2DModelForNCSN(UNet2DModel, ModelMixin, ConfigMixin):  # type: ignore[
             add_attention=add_attention,
             class_embed_type=class_embed_type,
             num_class_embeds=num_class_embeds,
-            num_train_timesteps=num_train_timesteps,
+            # TODO: If you specify num_train_timesteps here, the quality of the generated product will suddenly decrease ;(
+            # num_train_timesteps=num_train_timesteps,
         )
         sigmas = torch.exp(
             torch.linspace(
