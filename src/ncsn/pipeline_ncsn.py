@@ -5,11 +5,11 @@ from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline, ImagePipelineOutput
 from einops import rearrange
 
-from .scheduling_ncsn import (
-    AnnealedLangevinDynamicOutput,
-    AnnealedLangevinDynamicScheduler,
+from .scheduler.scheduling_ncsn import (
+    AnnealedLangevinDynamicsOutput,
+    AnnealedLangevinDynamicsScheduler,
 )
-from .unet_2d_ncsn import UNet2DModelForNCSN
+from .unet.unet_2d_ncsn import UNet2DModelForNCSN
 
 
 def normalize_images(image: torch.Tensor) -> torch.Tensor:
@@ -42,17 +42,17 @@ class NCSNPipeline(DiffusionPipeline):
     Parameters:
         unet ([`UNet2DModelForNCSN`]):
             A `UNet2DModelForNCSN` to estimate the score of the image.
-        scheduler ([`AnnealedLangevinDynamicScheduler`]):
-            A `AnnealedLangevinDynamicScheduler` to be used in combination with `unet` to estimate the score of the image.
+        scheduler ([`AnnealedLangevinDynamicsScheduler`]):
+            A `AnnealedLangevinDynamicsScheduler` to be used in combination with `unet` to estimate the score of the image.
     """
 
     unet: UNet2DModelForNCSN
-    scheduler: AnnealedLangevinDynamicScheduler
+    scheduler: AnnealedLangevinDynamicsScheduler
 
     _callback_tensor_inputs: List[str] = ["samples"]
 
     def __init__(
-        self, unet: UNet2DModelForNCSN, scheduler: AnnealedLangevinDynamicScheduler
+        self, unet: UNet2DModelForNCSN, scheduler: AnnealedLangevinDynamicsScheduler
     ) -> None:
         super().__init__()
         self.register_modules(unet=unet, scheduler=scheduler)
@@ -151,7 +151,7 @@ class NCSNPipeline(DiffusionPipeline):
                 )
                 samples = (
                     output.prev_sample
-                    if isinstance(output, AnnealedLangevinDynamicOutput)
+                    if isinstance(output, AnnealedLangevinDynamicsOutput)
                     else output[0]
                 )
 
