@@ -167,7 +167,7 @@ def train_iteration(
     data_loader: DataLoader,
     device: torch.device,
 ) -> None:
-    with tqdm(total=len(data_loader), desc="Iter") as pbar:
+    with tqdm(total=len(data_loader), desc="Iteration", leave=False) as pbar:
         for x, _ in data_loader:
             bsz = x.shape[0]
             x = x.to(device)
@@ -263,7 +263,9 @@ def main(model_args: ModelArgs, train_args: TrainArgs, valid_args: ValidArgs):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create the model
-    unet = UNet2DModelForNCSN(**asdict(model_args))
+    unet = UNet2DModelForNCSN(
+        num_train_timesteps=train_args.num_train_timesteps, **asdict(model_args)
+    )
     unet = unet.to(device)
 
     # Create the noise scheduler
