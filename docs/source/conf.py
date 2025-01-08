@@ -72,3 +72,4 @@ typehints_defaults = "comma"
 
 html_theme = "furo"
 html_static_path = ["_static"]
+html_favicon = "https://huggingface.co/front/assets/huggingface_logo-noborder.svg"
