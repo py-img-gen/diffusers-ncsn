@@ -10,7 +10,7 @@ from diffusers.models.modeling_utils import ModelMixin
 class UNet2DModelForNCSN(UNet2DModel, ModelMixin, ConfigMixin):  # type: ignore[misc]
     r"""A 2D UNet model for Noise Conditional Score Networks (NCSN).
 
-    This model inherits from [`diffusers.UNet2DModel`], which is a 2D UNet model that takes a noisy sample and a timestep and returns a sample shaped output. This model also inherits from [`diffusers.models.modeling_utils.ModelMixin`]. Check the superclass documentation for it's generic methods implemented for all models (such as downloading or saving).
+    This model inherits from :py:class:`~diffusers.UNet2DModel`, which is a 2D UNet model that takes a noisy sample and a timestep and returns a sample shaped output. This model also inherits from :py:class:`~diffusers.ModelMixin`. Check the superclass documentation for it's generic methods implemented for all models (such as downloading or saving).
 
     Args:
         sigma_min (`float`): Minimum standard deviation for the isotropic Gaussian noise.
@@ -50,7 +50,7 @@ class UNet2DModelForNCSN(UNet2DModel, ModelMixin, ConfigMixin):  # type: ignore[
             `resnet_time_scale_shift` is set to `default`, and if created will have `norm_num_groups` groups.
         norm_eps (`float`, *optional*, defaults to `1e-5`): The epsilon for normalization.
         resnet_time_scale_shift (`str`, *optional*, defaults to `"default"`): Time scale shift config
-            for ResNet blocks (see [`~models.resnet.ResnetBlock2D`]). Choose from `default` or `scale_shift`.
+            for ResNet blocks (see :py:class:`~diffusers.ResnetBlock2D`). Choose from `default` or `scale_shift`.
         class_embed_type (`str`, *optional*, defaults to `None`):
             The type of class embedding to use which is ultimately summed with the time embeddings. Choose from `None`,
             `"timestep"`, or `"identity"`.

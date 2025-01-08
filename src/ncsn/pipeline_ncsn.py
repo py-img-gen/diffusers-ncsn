@@ -38,13 +38,13 @@ class NCSNPipeline(DiffusionPipeline):
     r"""
     Pipeline for unconditional image generation using Noise Conditional Score Network (NCSN).
 
-    This model inherits from [`DiffusionPipeline`]. Check the superclass documentation for the generic methods
+    This model inherits from :py:class:`~diffusers.DiffusionPipeline`. Check the superclass documentation for the generic methods
     implemented for all pipelines (downloading, saving, running on a particular device, etc.).
 
     Parameters:
-        unet ([`UNet2DModelForNCSN`]):
+        unet (:py:class:`~ncsn.unet.UNet2DModelForNCSN`):
             A `UNet2DModelForNCSN` to estimate the score of the image.
-        scheduler ([`AnnealedLangevinDynamicsScheduler`]):
+        scheduler (:py:class:`~ncsn.scheduler.AnnealedLangevinDynamicsScheduler`):
             A `AnnealedLangevinDynamicsScheduler` to be used in combination with `unet` to estimate the score of the image.
     """
 
@@ -63,11 +63,11 @@ class NCSNPipeline(DiffusionPipeline):
         r"""Decodes the generated samples to the correct format suitable for images.
 
         Args:
-            samples (torch.Tensor):
+            samples (:py:class:`torch.Tensor`):
                 The generated samples to decode.
 
         Returns:
-            torch.Tensor: The decoded samples.
+            :py:class:`torch.Tensor`: The decoded samples.
         """
         # Normalize the generated image
         samples = normalize_images(samples)
@@ -102,8 +102,7 @@ class NCSNPipeline(DiffusionPipeline):
             num_inference_steps (`int`, *optional*, defaults to 10):
                 The number of inference steps.
             generator (`torch.Generator`, `optional`):
-                A [`torch.Generator`](https://pytorch.org/docs/stable/generated/torch.Generator.html) to make
-                generation deterministic.
+                A :py:class:`torch.Generator` to make generation deterministic.
             output_type (`str`, `optional`, defaults to `"pil"`):
                 The output format of the generated image. Choose between `PIL.Image` or `np.array`.
             return_dict (`bool`, *optional*, defaults to `True`):
@@ -119,8 +118,8 @@ class NCSNPipeline(DiffusionPipeline):
                 `._callback_tensor_inputs` attribute of your pipeline class.
 
         Returns:
-            `diffusers.pipelines.ImagePipelineOutput` or `tuple`:
-                If `return_dict` is `True`, `diffusers.pipelines.ImagePipelineOutput` is returned, otherwise a `tuple` is
+            :py:class:`diffusers.ImagePipelineOutput` or `tuple`:
+                If `return_dict` is `True`, :py:class:`diffusers.ImagePipelineOutput` is returned, otherwise a `tuple` is
                 returned where the first element is a list with the generated images.
         """
         callback_on_step_end_tensor_inputs = (

@@ -1,6 +1,6 @@
 # UNet2DModel for NCSN
 
-`UNet2DModelForNCSN` is a 2D U-Net model suitable for Noise Conditional Score Networks (NCSN) proposed by by Yang Song and Stefano Ermon in the paper [Generative Modeling by Estimating Gradients of the Data Distribution](https://arxiv.org/abs/1907.05600). The model inherits from the diffuser's `UNet2DModel` and is designed to be used with the `AnnealedLangevinDynamicsScheduler` scheduler.
+{py:class}`~ncsn.unet.UNet2DModelForNCSN` is a 2D U-Net model suitable for Noise Conditional Score Networks (NCSN) proposed by by Yang Song and Stefano Ermon in the paper [Generative Modeling by Estimating Gradients of the Data Distribution](https://arxiv.org/abs/1907.05600). The model inherits from the diffuser's {py:class}`~diffusers.UNet2DModel` and is designed to be used with the {py:class}`~ncsn.scheduler.AnnealedLangevinDynamicsScheduler` scheduler.
 
 The abstract of the paper is the following:
 

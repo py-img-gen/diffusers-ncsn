@@ -51,13 +51,9 @@ source_suffix = [".rst", ".md"]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "rich": ("https://rich.readthedocs.io/en/latest", None),
     "torch": ("https://pytorch.org/docs/stable", None),
-    "flax": ("https://flax.readthedocs.io/en/latest", None),
-    "fairscale": ("https://fairscale.readthedocs.io/en/latest/", None),
-    "datasets": ("https://huggingface.co/docs/datasets/master/en", None),
     "transformers": ("https://huggingface.co/docs/transformers/master/en", None),
-    "beaker": ("https://beaker-py.readthedocs.io/en/latest/", None),
+    "diffusers": ("https://huggingface.co/docs/diffusers/main/en", None),
 }
 
 # Tell myst-parser to assign header anchors for h1-h3.

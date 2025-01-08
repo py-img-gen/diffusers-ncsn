@@ -1,7 +1,7 @@
 # Pipeline for NCSN
 
-`NCSNPipeline` is a pipeline for training and inference of Noise Conditional Score Networks (NCSN) proposed by by Yang Song and Stefano Ermon in the paper [Generative Modeling by Estimating Gradients of the Data Distribution](https://arxiv.org/abs/1907.05600). The pipeline is designed to be used with the 
-`UNet2DModelForNCSN` model and the `AnnealedLangevinDynamicsScheduler` scheduler.
+{py:class}`~ncsn.pipeline_ncsn.NCSNPipeline` is a pipeline for training and inference of Noise Conditional Score Networks (NCSN) proposed by by Yang Song and Stefano Ermon in the paper [Generative Modeling by Estimating Gradients of the Data Distribution](https://arxiv.org/abs/1907.05600). The pipeline is designed to be used with the 
+{py:class}`~ncsn.unet.UNet2DModelForNCSN` model and the {py:class}`~ncsn.scheduler.AnnealedLangevinDynamicsScheduler` scheduler.
 
 The abstract of the paper is the following:
 

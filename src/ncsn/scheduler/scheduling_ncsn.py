@@ -22,7 +22,7 @@ class AnnealedLangevinDynamicsOutput(SchedulerOutput):
 class AnnealedLangevinDynamicsScheduler(SchedulerMixin, ConfigMixin):  # type: ignore
     r"""Annealed Langevin Dynamics scheduler for Noise Conditional Score Networks (NCSN).
 
-    This scheduler inherits from [`SchedulerMixin`]. Check the superclass documentation for it's generic methods implemented for all schedulers (such as downloading or saving).
+    This scheduler inherits from :py:class:`~diffusers.SchedulerMixin`. Check the superclass documentation for it's generic methods implemented for all schedulers (such as downloading or saving).
 
     Args:
         num_train_timesteps (`int`): Number of training timesteps.
