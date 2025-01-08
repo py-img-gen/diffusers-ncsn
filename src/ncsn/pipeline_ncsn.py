@@ -14,10 +14,11 @@ from .unet.unet_2d_ncsn import UNet2DModelForNCSN
 
 
 def normalize_images(image: torch.Tensor) -> torch.Tensor:
-    """Normalize the image to be between 0 and 1 using min-max normalization manner.
+    r"""Normalize the image to be between 0 and 1 using min-max normalization manner.
 
     Args:
-        image (torch.Tensor): The batch of images to normalize.
+        image (torch.Tensor):
+            The batch of images to normalize.
 
     Returns:
         torch.Tensor: The normalized image.
@@ -59,6 +60,15 @@ class NCSNPipeline(DiffusionPipeline):
         self.register_modules(unet=unet, scheduler=scheduler)
 
     def decode_samples(self, samples: torch.Tensor) -> torch.Tensor:
+        r"""Decodes the generated samples to the correct format suitable for images.
+
+        Args:
+            samples (torch.Tensor):
+                The generated samples to decode.
+
+        Returns:
+            torch.Tensor: The decoded samples.
+        """
         # Normalize the generated image
         samples = normalize_images(samples)
         # Rearrange the generated image to the correct format
@@ -109,8 +119,8 @@ class NCSNPipeline(DiffusionPipeline):
                 `._callback_tensor_inputs` attribute of your pipeline class.
 
         Returns:
-            [`~pipelines.ImagePipelineOutput`] or `tuple`:
-                If `return_dict` is `True`, [`~pipelines.ImagePipelineOutput`] is returned, otherwise a `tuple` is
+            `diffusers.pipelines.ImagePipelineOutput` or `tuple`:
+                If `return_dict` is `True`, `diffusers.pipelines.ImagePipelineOutput` is returned, otherwise a `tuple` is
                 returned where the first element is a list with the generated images.
         """
         callback_on_step_end_tensor_inputs = (
