@@ -101,6 +101,15 @@ While referring to 📝 [Load community pipelines and components - huggingface d
   - Based on this, the code in this library is also placed in the same directory structure as the HF Hub.
   - For example, `pipeline_ncsn.py` imports `unet_2d_ncsn.py` as `from .unet.unet_2d_ncsn import UNet2DModelForNCSN` because it is placed in the `unet` subfolder.
 
+## License
+
+<!-- start license -->
+
+**diffusers-ncsn** is licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+A full copy of the license can be found [on GitHub](https://github.com/py-img-gen/diffusers-ncsn/blob/main/LICENSE).
+
+<!-- end license -->
+
 ## Acknowledgements
 
 - JeongJiHeon/ScoreDiffusionModel: The Pytorch Tutorial of Score-based and Diffusion Model https://github.com/JeongJiHeon/ScoreDiffusionModel/tree/main 
