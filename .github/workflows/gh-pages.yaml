@@ -1,0 +1,42 @@
+name: Document
+
+on: push
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Typo check
+        uses: crate-ci/typos@v1.29.0
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          make setup
+          make install
+
+      - name: Build HTML
+        run: |
+          make html
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages

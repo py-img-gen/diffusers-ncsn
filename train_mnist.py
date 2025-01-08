@@ -188,7 +188,8 @@ def train_iteration(
             # Calculate the score using the model
             scores = unet(x_noisy, t).sample  # type: ignore
             # Calculate the target score
-            used_sigmas = unet.sigmas[t]  # type: ignore
+
+            used_sigmas = unet.sigmas[t]
             used_sigmas = rearrange(used_sigmas, "b -> b 1 1 1")
             target = -1 / used_sigmas * z
             # Rearrange the tensors

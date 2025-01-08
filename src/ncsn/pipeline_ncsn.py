@@ -14,10 +14,11 @@ from .unet.unet_2d_ncsn import UNet2DModelForNCSN
 
 
 def normalize_images(image: torch.Tensor) -> torch.Tensor:
-    """Normalize the image to be between 0 and 1 using min-max normalization manner.
+    r"""Normalize the image to be between 0 and 1 using min-max normalization manner.
 
     Args:
-        image (torch.Tensor): The batch of images to normalize.
+        image (torch.Tensor):
+            The batch of images to normalize.
 
     Returns:
         torch.Tensor: The normalized image.
@@ -37,13 +38,13 @@ class NCSNPipeline(DiffusionPipeline):
     r"""
     Pipeline for unconditional image generation using Noise Conditional Score Network (NCSN).
 
-    This model inherits from [`DiffusionPipeline`]. Check the superclass documentation for the generic methods
+    This model inherits from :py:class:`~diffusers.DiffusionPipeline`. Check the superclass documentation for the generic methods
     implemented for all pipelines (downloading, saving, running on a particular device, etc.).
 
     Parameters:
-        unet ([`UNet2DModelForNCSN`]):
+        unet (:py:class:`~ncsn.unet.UNet2DModelForNCSN`):
             A `UNet2DModelForNCSN` to estimate the score of the image.
-        scheduler ([`AnnealedLangevinDynamicsScheduler`]):
+        scheduler (:py:class:`~ncsn.scheduler.AnnealedLangevinDynamicsScheduler`):
             A `AnnealedLangevinDynamicsScheduler` to be used in combination with `unet` to estimate the score of the image.
     """
 
@@ -59,6 +60,15 @@ class NCSNPipeline(DiffusionPipeline):
         self.register_modules(unet=unet, scheduler=scheduler)
 
     def decode_samples(self, samples: torch.Tensor) -> torch.Tensor:
+        r"""Decodes the generated samples to the correct format suitable for images.
+
+        Args:
+            samples (:py:class:`torch.Tensor`):
+                The generated samples to decode.
+
+        Returns:
+            :py:class:`torch.Tensor`: The decoded samples.
+        """
         # Normalize the generated image
         samples = normalize_images(samples)
         # Rearrange the generated image to the correct format
@@ -92,8 +102,7 @@ class NCSNPipeline(DiffusionPipeline):
             num_inference_steps (`int`, *optional*, defaults to 10):
                 The number of inference steps.
             generator (`torch.Generator`, `optional`):
-                A [`torch.Generator`](https://pytorch.org/docs/stable/generated/torch.Generator.html) to make
-                generation deterministic.
+                A :py:class:`torch.Generator` to make generation deterministic.
             output_type (`str`, `optional`, defaults to `"pil"`):
                 The output format of the generated image. Choose between `PIL.Image` or `np.array`.
             return_dict (`bool`, *optional*, defaults to `True`):
@@ -109,8 +118,8 @@ class NCSNPipeline(DiffusionPipeline):
                 `._callback_tensor_inputs` attribute of your pipeline class.
 
         Returns:
-            [`~pipelines.ImagePipelineOutput`] or `tuple`:
-                If `return_dict` is `True`, [`~pipelines.ImagePipelineOutput`] is returned, otherwise a `tuple` is
+            :py:class:`diffusers.ImagePipelineOutput` or `tuple`:
+                If `return_dict` is `True`, :py:class:`diffusers.ImagePipelineOutput` is returned, otherwise a `tuple` is
                 returned where the first element is a list with the generated images.
         """
         callback_on_step_end_tensor_inputs = (
