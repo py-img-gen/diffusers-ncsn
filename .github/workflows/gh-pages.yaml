@@ -1,4 +1,4 @@
-name: Document
+name: docs
 
 on: push
 
@@ -38,5 +38,5 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
+          publish_dir: ./docs/build/html
           publish_branch: gh-pages
