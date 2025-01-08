@@ -89,7 +89,7 @@ Example of generating MNIST character images using the model trained with [`trai
     <img alt="mnist" src="https://github.com/user-attachments/assets/483b6637-2684-4844-8aa1-12b866d46226" width="50%" />
 </p>
 
-# Notes on uploading pipelines to the HF Hub with custom components
+## Notes on uploading pipelines to the HF Hub with custom components
 
 While referring to 📝 [Load community pipelines and components - huggingface diffusers](https://huggingface.co/docs/diffusers/using-diffusers/custom_pipeline_overview#community-components), pay attention to the following points.
 - Change [the `_class_name` attribute](https://huggingface.co/py-img-gen/ncsn-mnist/blob/main/model_index.json#L2) in [`model_index.json`](https://huggingface.co/py-img-gen/ncsn-mnist/blob/main/model_index.json) to `["pipeline_ncsn", "NCSNPipeline"]`.
@@ -100,6 +100,11 @@ While referring to 📝 [Load community pipelines and components - huggingface d
 - Ensure that the custom components are placed in each subfolder because they are referenced by relative paths from `pipeline_ncsn.py`.
   - Based on this, the code in this library is also placed in the same directory structure as the HF Hub.
   - For example, `pipeline_ncsn.py` imports `unet_2d_ncsn.py` as `from .unet.unet_2d_ncsn import UNet2DModelForNCSN` because it is placed in the `unet` subfolder.
+
+## License
+
+**diffusers-ncsn** is licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+A full copy of the license can be found [on GitHub](https://github.com/py-img-gen/diffusers-ncsn/blob/main/LICENSE).
 
 ## Acknowledgements
 
