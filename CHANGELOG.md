@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.1.0](https://github.com/py-img-gen/diffusers-ncsn/compare/v0.0.1...v0.1.0) - 2025-02-21
+- update version by @shunk031 in https://github.com/py-img-gen/diffusers-ncsn/pull/17
+
 ## [v0.1.0](https://github.com/py-img-gen/diffusers-ncsn/commits/v0.1.0) - 2025-02-21
 - Initialize by @shunk031 in https://github.com/py-img-gen/diffusers-ncsn/pull/1
 - Update pipeline by @shunk031 in https://github.com/py-img-gen/diffusers-ncsn/pull/2
