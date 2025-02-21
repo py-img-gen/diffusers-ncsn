@@ -4,7 +4,7 @@
 [![Document](https://github.com/py-img-gen/diffusers-ncsn/actions/workflows/gh-pages.yaml/badge.svg)](https://github.com/py-img-gen/diffusers-ncsn/actions/workflows/gh-pages.yaml)
 [![ermongroup/ncsn](https://img.shields.io/badge/Official_code-ermongroup%2Fncsn-green)](https://github.com/ermongroup/ncsn)
 [![Model on HF](https://img.shields.io/badge/🤗%20Model%20on%20HF-py--img--gen/ncsn--mnist-D4AA00)](https://huggingface.co/py-img-gen/ncsn-mnist)
-[![PyPI](https://img.shields.io/pypi/v/mvanet.svg)](https://pypi.python.org/pypi/mvanet)
+[![PyPI](https://img.shields.io/pypi/v/diffusers-ncsn.svg)](https://pypi.org/project/diffusers-ncsn/)
 
 [`🤗 diffusers`](https://github.com/huggingface/diffusers) implementation of the paper ["Generative Modeling by Estimating Gradients of the Data Distribution" [Yang+ NeurIPS'19]](https://arxiv.org/abs/1907.05600).
 
