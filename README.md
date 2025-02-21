@@ -2,8 +2,9 @@
 
 [![CI](https://github.com/py-img-gen/diffusers-ncsn/actions/workflows/ci.yaml/badge.svg)](https://github.com/py-img-gen/diffusers-ncsn/actions/workflows/ci.yaml) 
 [![Document](https://github.com/py-img-gen/diffusers-ncsn/actions/workflows/gh-pages.yaml/badge.svg)](https://github.com/py-img-gen/diffusers-ncsn/actions/workflows/gh-pages.yaml)
-[![ermongroup/ncsn](https://img.shields.io/badge/Official_code-GitHub-green)](https://github.com/ermongroup/ncsn)
+[![ermongroup/ncsn](https://img.shields.io/badge/Official_code-ermongroup%2Fncsn-green)](https://github.com/ermongroup/ncsn)
 [![Model on HF](https://img.shields.io/badge/🤗%20Model%20on%20HF-py--img--gen/ncsn--mnist-D4AA00)](https://huggingface.co/py-img-gen/ncsn-mnist)
+[![PyPI](https://img.shields.io/pypi/v/mvanet.svg)](https://pypi.python.org/pypi/mvanet)
 
 [`🤗 diffusers`](https://github.com/huggingface/diffusers) implementation of the paper ["Generative Modeling by Estimating Gradients of the Data Distribution" [Yang+ NeurIPS'19]](https://arxiv.org/abs/1907.05600).
 
@@ -45,7 +46,7 @@ image.save("output.png")
 First, install the package from this repository:
 
 ```shell
-pip install git+https://github.com/py-img-gen/diffusers-ncsn
+pip install diffusers-ncsn
 ```
 
 Then, you can use the package as follows:
