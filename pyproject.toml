@@ -1,6 +1,6 @@
 [project]
 name = "diffusers-ncsn"
-version = "0.0.1"
+version = "0.1.0"
 description = "Diffusers implementation of Noise Conditional Score Networks (NCSN) [Yang+ NeuriPS'19]"
 authors = [
     { name = "Shunsuke Kitada", email = "shunsuke.kitada.0831@gmail.com" },
