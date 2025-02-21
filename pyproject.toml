@@ -1,12 +1,28 @@
 [project]
 name = "diffusers-ncsn"
-version = "0.1.0"
+version = "0.0.1"
 description = "Diffusers implementation of Noise Conditional Score Networks (NCSN) [Yang+ NeuriPS'19]"
 authors = [
     { name = "Shunsuke Kitada", email = "shunsuke.kitada.0831@gmail.com" },
     { name = "Image Generation with Python", email = "python.image.generation@gmail.com" },
 ]
 readme = "README.md"
+license = "Apache-2.0"
+keywords = [
+    "python",
+    "diffusers",
+    "generative-model",
+    "noise conditional score networks",
+    "ncsn",
+]
+classifiers = [
+    # Audience
+    "Intended Audience :: Developers",
+    # Supported Python versions
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
 requires-python = ">=3.10"
 dependencies = [
     "diffusers[torch]>=0.31.0",
@@ -37,5 +53,5 @@ build-backend = "hatchling.build"
 packages = ["src/ncsn"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.10"
 ignore_missing_imports = true
